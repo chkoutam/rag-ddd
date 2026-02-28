@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, List, Mapping, Sequence
 
-from rag_ddd.domain.entities import Chunk, Document, Query, RetrievedChunk
+from rag_ddd.domain.entities import Chunk, Document, NLPResult, Query, RetrievedChunk
 
 class DocumentLoader(ABC):
     @abstractmethod
@@ -108,4 +108,10 @@ class BlobStore(ABC):
 
     @abstractmethod
     def delete(self, path: str) -> None:
+        raise NotImplementedError
+
+
+class NLPEnricher(ABC):
+    @abstractmethod
+    def enrich(self, text: str) -> NLPResult:
         raise NotImplementedError

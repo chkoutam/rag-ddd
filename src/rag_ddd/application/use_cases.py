@@ -23,6 +23,7 @@ from rag_ddd.domain.ports import (
     DocumentStore,
     EmbeddingModel,
     LLM,
+    NLPEnricher,
     Reranker,
     VectorStore,
 )
@@ -46,6 +47,7 @@ class RAGQueryUseCase:
             if cached:
                 return QueryResult(answer=Answer(text=cached, sources=[]))
 
+        # Embed, retrieve, optionally rerank, then generate answer.
         query = Query(text=query_text)
         query_embedding = self.embedder.embed([query_text])[0]
         retrieved = self.vector_store.query(query_embedding, self.retrieval_top_k)
@@ -90,6 +92,7 @@ class UploadDocumentUseCase:
         metadata: dict[str, object] | None = None,
     ) -> UploadResult:
         now = datetime.now(timezone.utc).isoformat()
+        # Idempotency guard: avoid duplicate uploads by checksum.
         checksum = sha256(content).hexdigest()
         existing = self.document_store.list({"checksum": checksum})
         if existing:
@@ -125,6 +128,7 @@ class IngestDocumentUseCase:
     embedder: EmbeddingModel
     vector_store: VectorStore
     chunk_store: ChunkStore | None = None
+    nlp_enricher: NLPEnricher | None = None
     embedding_batch_size: int = 64
     chunk_size: int = 0
     chunk_overlap: int = 0
@@ -139,8 +143,41 @@ class IngestDocumentUseCase:
             self.document_store.update(doc_id, {"status": "ERROR", "updated_at": self._now()})
             return IngestDocumentResult(doc_id=doc_id, chunks=0, status="ERROR")
 
+        # NLP enrichment: extract entities, classify, summarize
+        nlp_metadata: dict[str, object] = {}
+        if self.nlp_enricher:
+            nlp_result = self.nlp_enricher.enrich(text)
+            nlp_metadata = {
+                "nlp_category": nlp_result.category,
+                "nlp_category_confidence": nlp_result.category_confidence,
+                "nlp_entities": [
+                    {"text": e.text, "label": e.label} for e in nlp_result.entities
+                ],
+                "nlp_title": nlp_result.title,
+                "nlp_author": nlp_result.author,
+                "nlp_key_concepts": nlp_result.key_concepts,
+                "nlp_summary": nlp_result.summary,
+            }
+            self.document_store.update(doc_id, {
+                "nlp_enrichment": nlp_metadata,
+                "status": "ENRICHED",
+                "updated_at": self._now(),
+            })
+
+        # Mark indexing in-progress, then chunk and embed.
         self.document_store.update(doc_id, {"status": "INDEXING", "updated_at": self._now()})
-        chunks = self.chunker.chunk([self._to_domain_document(doc_id, document)])
+        doc_domain = self._to_domain_document(doc_id, document)
+        # Inject NLP metadata into each chunk's metadata
+        if nlp_metadata:
+            from dataclasses import replace
+
+            merged_meta = {**doc_domain.metadata, **{
+                "category": nlp_metadata.get("nlp_category", ""),
+                "key_concepts": nlp_metadata.get("nlp_key_concepts", []),
+            }}
+            doc_domain = replace(doc_domain, metadata=merged_meta)
+
+        chunks = self.chunker.chunk([doc_domain])
         if not chunks:
             self.document_store.update(doc_id, {"status": "ERROR", "updated_at": self._now()})
             return IngestDocumentResult(doc_id=doc_id, chunks=0, status="ERROR")
@@ -177,6 +214,7 @@ class IngestDocumentUseCase:
             batch_texts = [chunk.text for chunk in chunks[start:end]]
             embeddings.extend(self.embedder.embed(batch_texts))
 
+        # Upsert into vector store and persist indexing status.
         self.vector_store.upsert(chunks, embeddings)
         self.document_store.update(
             doc_id,
@@ -199,6 +237,7 @@ class ReindexDocumentUseCase:
         if self.ingest_use_case.chunk_store:
             chunks = self.ingest_use_case.chunk_store.list_by_doc_id(doc_id)
             if chunks:
+                # Fast path: re-embed from stored chunks.
                 self.vector_store.delete_by_doc_id(doc_id)
                 chunk_count = self.ingest_use_case._index_chunks(doc_id, chunks)
                 return IngestDocumentResult(doc_id=doc_id, chunks=chunk_count, status="INDEXED")
@@ -221,6 +260,7 @@ class DeleteDocumentUseCase:
         gcs_path = str(document.get("gcs_path", "")).strip()
         if gcs_path:
             self.blob_store.delete(gcs_path)
+        # Ensure all downstream stores are cleaned up.
         self.vector_store.delete_by_doc_id(doc_id)
         if self.chunk_store:
             self.chunk_store.delete_by_doc_id(doc_id)
@@ -249,6 +289,7 @@ class RechunkDocumentUseCase:
             self.document_store.update(doc_id, {"status": "ERROR", "updated_at": self._now()})
             return IngestDocumentResult(doc_id=doc_id, chunks=0, status="ERROR")
 
+        # Rebuild chunks and reindex embeddings.
         self.document_store.update(doc_id, {"status": "RECHUNKING", "updated_at": self._now()})
         chunks = self.chunker.chunk([self._to_domain_document(doc_id, document)])
         if not chunks:
@@ -287,6 +328,7 @@ class RechunkDocumentUseCase:
             batch_texts = [chunk.text for chunk in chunks[start:end]]
             embeddings.extend(self.embedder.embed(batch_texts))
 
+        # Replace vectors and update document status.
         self.vector_store.upsert(chunks, embeddings)
         self.document_store.update(
             doc_id,
