@@ -16,7 +16,6 @@ dependencies = [
   "qdrant-client>=1.9.0",
   "redis>=5.0.0",
   "pymongo>=4.7.0",
-  "google-cloud-storage>=2.17.0",
   "tenacity>=9.0.0",
   "tiktoken>=0.7.0",
   "python-dotenv>=1.0.1",
@@ -24,7 +23,27 @@ dependencies = [
   "typer>=0.12.0",
   "rich>=13.7.0",
   "pypdf>=4.2.0",
+  "sentence-transformers>=3.0.0",
+  "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+# Cloud providers (install only what you need)
+gcs = ["google-cloud-storage>=2.17.0"]
+opik = ["opik>=1.0.0"]
+
+# Local/on-premise providers
+minio = ["minio>=7.2.0"]
+docling = ["docling>=2.0.0"]
+nlp = ["spacy>=3.7.0"]
+
+# All providers
+all = [
+  "google-cloud-storage>=2.17.0",
   "opik>=1.0.0",
+  "minio>=7.2.0",
+  "docling>=2.0.0",
+  "spacy>=3.7.0",
 ]
 
 [project.scripts]
