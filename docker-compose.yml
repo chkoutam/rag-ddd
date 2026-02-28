@@ -40,7 +40,7 @@ services:
       - langfuse_pg_data:/var/lib/postgresql/data
 
   langfuse:
-    image: langfuse/langfuse:latest
+    image: langfuse/langfuse:2
     ports:
       - "3000:3000"
     environment:
