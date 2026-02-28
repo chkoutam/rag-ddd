@@ -64,4 +64,6 @@ class FileLoader(DocumentLoader):
                 pages.append(page.extract_text() or "")
             except Exception:
                 pages.append("")
-        return "\n".join(pages)
+        text = "\n".join(pages)
+        # Remove Unicode surrogates that pypdf sometimes produces
+        return text.encode("utf-8", errors="replace").decode("utf-8")
