@@ -30,6 +30,17 @@ services:
     volumes:
       - minio_data:/data
 
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: rag
+      POSTGRES_DB: rag_ddd
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   langfuse-db:
     image: postgres:16
     environment:
@@ -55,4 +66,5 @@ volumes:
   qdrant_data:
   mongo_data:
   minio_data:
+  postgres_data:
   langfuse_pg_data:

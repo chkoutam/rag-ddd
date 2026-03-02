@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai", "ollama", "vllm"] = "openai"
     embedder_provider: Literal["openai", "bge"] = "openai"
     blob_store_provider: Literal["gcs", "minio"] = "gcs"
-    doc_store_provider: Literal["mongo"] = "mongo"
+    doc_store_provider: Literal["mongo", "postgres"] = "mongo"
     chunker_type: Literal["recursive", "semantic"] = "recursive"
     parser_provider: Literal["pypdf", "docling"] = "pypdf"
     tracer_provider: Literal["opik", "langfuse", "none"] = "opik"
@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     mongodb_database: str = "rag_ddd"
     mongodb_documents_collection: str = "documents"
     mongodb_chunks_collection: str = "chunks"
+
+    # ── PostgreSQL (document store — alternative to MongoDB) ───
+    postgres_dsn: str = "postgresql://rag:rag@localhost:5432/rag_ddd"
+    postgres_documents_table: str = "documents"
+    postgres_chunks_table: str = "chunks"
 
     # ── MinIO (self-hosted blob storage) ───────────────────────
     minio_url: str = "http://localhost:9000"

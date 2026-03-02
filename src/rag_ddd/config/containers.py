@@ -145,6 +145,13 @@ def build_document_store(settings: Settings) -> DocumentStore:
                 database=settings.mongodb_database,
                 collection=settings.mongodb_documents_collection,
             )
+        case "postgres":
+            from rag_ddd.infrastructure.document_store.postgres import PostgresDocumentStore
+
+            return PostgresDocumentStore(
+                dsn=settings.postgres_dsn,
+                table=settings.postgres_documents_table,
+            )
         case _:
             raise ValueError(f"Unknown DOC_STORE_PROVIDER: {settings.doc_store_provider}")
 
@@ -161,6 +168,13 @@ def build_chunk_store(settings: Settings) -> ChunkStore:
                 uri=settings.mongodb_uri,
                 database=settings.mongodb_database,
                 collection=settings.mongodb_chunks_collection,
+            )
+        case "postgres":
+            from rag_ddd.infrastructure.chunk_store.postgres import PostgresChunkStore
+
+            return PostgresChunkStore(
+                dsn=settings.postgres_dsn,
+                table=settings.postgres_chunks_table,
             )
         case _:
             raise ValueError(f"Unknown DOC_STORE_PROVIDER: {settings.doc_store_provider}")

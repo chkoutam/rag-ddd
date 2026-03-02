@@ -33,6 +33,7 @@ gcs = ["google-cloud-storage>=2.17.0"]
 opik = ["opik>=1.0.0"]
 
 # Local/on-premise providers
+postgres = ["psycopg[binary]>=3.1.0"]
 minio = ["minio>=7.2.0"]
 docling = ["docling>=2.0.0"]
 nlp = ["spacy>=3.7.0"]
@@ -41,6 +42,7 @@ nlp = ["spacy>=3.7.0"]
 all = [
   "google-cloud-storage>=2.17.0",
   "opik>=1.0.0",
+  "psycopg[binary]>=3.1.0",
   "minio>=7.2.0",
   "docling>=2.0.0",
   "spacy>=3.7.0",
