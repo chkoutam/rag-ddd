@@ -114,13 +114,24 @@ def build_reranker(settings: Settings, embedder: EmbeddingModel) -> Reranker | N
 
 
 def build_vector_store(settings: Settings) -> VectorStore:
-    from rag_ddd.infrastructure.vector_store.qdrant import QdrantVectorStore
+    match settings.vector_store_provider:
+        case "qdrant":
+            from rag_ddd.infrastructure.vector_store.qdrant import QdrantVectorStore
 
-    return QdrantVectorStore(
-        url=settings.qdrant_url,
-        api_key=settings.qdrant_api_key,
-        collection=settings.qdrant_collection,
-    )
+            return QdrantVectorStore(
+                url=settings.qdrant_url,
+                api_key=settings.qdrant_api_key,
+                collection=settings.qdrant_collection,
+            )
+        case "pgvector":
+            from rag_ddd.infrastructure.vector_store.pgvector import PgVectorStore
+
+            return PgVectorStore(
+                dsn=settings.postgres_dsn,
+                table=settings.pgvector_table,
+            )
+        case _:
+            raise ValueError(f"Unknown VECTOR_STORE_PROVIDER: {settings.vector_store_provider}")
 
 
 # ── Cache ──────────────────────────────────────────────────────

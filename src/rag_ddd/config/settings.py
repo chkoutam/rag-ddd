@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     embedder_provider: Literal["openai", "bge"] = "openai"
     blob_store_provider: Literal["gcs", "minio"] = "gcs"
     doc_store_provider: Literal["mongo", "postgres"] = "mongo"
+    vector_store_provider: Literal["qdrant", "pgvector"] = "qdrant"
     chunker_type: Literal["recursive", "semantic"] = "recursive"
     parser_provider: Literal["pypdf", "docling"] = "pypdf"
     tracer_provider: Literal["opik", "langfuse", "none"] = "opik"
@@ -52,6 +53,9 @@ class Settings(BaseSettings):
     postgres_dsn: str = "postgresql://rag:rag@localhost:5432/rag_ddd"
     postgres_documents_table: str = "documents"
     postgres_chunks_table: str = "chunks"
+
+    # ── pgvector (vector store — alternative to Qdrant) ────────
+    pgvector_table: str = "embeddings"
 
     # ── MinIO (self-hosted blob storage) ───────────────────────
     minio_url: str = "http://localhost:9000"
